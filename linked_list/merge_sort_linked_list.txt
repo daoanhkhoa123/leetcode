@@ -1,0 +1,76 @@
+def merge_sort_linkedlist(l1, l2):
+    res = LinkedList()
+
+    p1 = l1.head
+    p2 = l2.head
+
+    minn = p1.data
+
+    while p1 and p2:
+        minn = p1.data
+
+        if minn > p2.data:
+            minn = p2.data
+            p2 = p2.next
+
+        if minn >= p1.data:
+            minn = p1.data
+            p1=p1.next
+
+        res.add(minn)
+  
+    p=p1 or p2
+    while p:
+        res.add(p.data)
+        p=p.next
+
+    return  res
+
+l1 =  LinkedList()
+l2 = LinkedList()
+for i  in [1, 2,4]:
+    l1.add(i)
+
+for i  in  [1, 3,  4]:
+    l2.add(i)
+
+merge_sort_linkedlist(l1, l2).print()
+
+def merge_sort_linkedlist(l1, l2):
+    res = LinkedList()
+
+    p1 = l1.head
+    p2 = l2.head
+
+    minn = p1.data
+
+    while p1 and p2:
+        minn = p1.data
+
+        if minn > p2.data:
+            minn = p2.data
+            p2 = p2.next
+
+        if minn >= p1.data:
+            minn = p1.data
+            p1=p1.next
+
+        res.add(minn)
+  
+    p=p1 or p2
+    while p:
+        res.add(p.data)
+        p=p.next
+
+    return  res
+
+l1 =  LinkedList()
+l2 = LinkedList()
+for i  in [1, 2,4]:
+    l1.add(i)
+
+for i  in  [1, 3,  4]:
+    l2.add(i)
+
+merge_sort_linkedlist(l1, l2).print()
+

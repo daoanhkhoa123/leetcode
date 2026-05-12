@@ -1,0 +1,304 @@
+USE_BREAK_DISPLAY = True        # to get more details in the console when a test fails
+
+from dataclasses import dataclass
+
+@dataclass(frozen=True)
+class Node:
+    y: int
+    x: int
+    
+    @classmethod
+    def init(cls, y, x, col_major):
+        if col_major:
+            return cls(y,x)
+        else:
+            return cls(x, y)
+    
+@dataclass
+class Edge:
+    type: str
+    start: Node
+    to: int = 0
+    
+class Graph:
+    def __init__(self):
+        self.graph = dict()
+        
+    def __getitem__(self, key):
+        return self.graph[key]
+    
+    def __len__(self):
+        return len(self.graph)
+    
+    def nodes(self):
+        for k in self.graph:
+            yield k
+    
+    def show(self):
+        for k in self.graph:
+            for k2 in self.graph[k]:
+                print(k, k2, self[k][k2])
+            print("-"*10)
+    
+    def add_node(self, node):
+        if node not in self.graph:
+            self.graph[node] = {}
+        
+    def connect(self, start, to, edge):
+        self.graph[start][to] = edge
+        self.graph[to][start] = edge
+        
+    
+class MaybeMatrix:
+    def __init__(self, matrix):
+        self.mat = matrix
+        self.height = len(self.mat)
+        self.width  =  len(self.mat[0])
+        self.cm =  True
+        
+    def column_major(self):
+        self.cm =  True
+        
+    def row_major(self):
+        self.cm = False   
+
+    def __len__(self):
+        return self.height
+       
+    def get(self, y, x):
+        if not self.cm:
+            y, x = x, y 
+            
+        if y < 0 or y >= self.height:
+            return None
+        if x <  0 or x >= self.width:
+            return   None
+        return self.mat[y][x]
+
+########################
+#   BUILD INITIAL GRAPH
+########################
+   
+def _buid(graph, text, i_major, j_major, edge_type):
+    for i in range(i_major):
+        cache_edge = None
+#         print()
+        for j in range(j_major):
+#             print(text.get(i, j), end="")
+            
+            # if is a node
+            if text.get(i, j)  == "+":
+                graph.add_node(Node.init(i, j, text.cm))
+                
+                # if previous is also a node, connect them
+                if text.get(i,j-1) == "+":
+                    node = Node.init(i, j, text.cm)
+                    graph.connect(node, Node(i, j-1, text.cm), Edge(edge_type, node, 0))
+                
+                # if previous  is an edge, connect the from cache edge
+                if text.get(i,j-1) == edge_type:
+                    cache_edge.to += 1
+                    graph.connect(cache_edge.start, Node.init(i, j, text.cm), cache_edge)
+                    
+                
+            # if is an edge
+            if text.get(i, j) == edge_type:
+                # if previous is an edge also
+                if text.get(i, j-1) == edge_type:
+                    cache_edge.to += 1  # longer
+                    
+                # if previous is a node, new edge start from it
+                if text.get(i,j-1) == "+":
+                    cache_edge = Edge(edge_type, Node.init(i, j-1, text.cm))      
+            
+            cache_row = text.get(i, j)
+            
+
+def build_graph(text):
+    text = MaybeMatrix(text.split("\n"))
+    graph = Graph()
+    
+    text.column_major()
+    _buid(graph, text, text.height, text.width, "-")
+    text.row_major()
+    _buid(graph, text, text.width, text.height, "|")
+    return graph
+
+#########################
+#   BUILD SEPERATE SHAPE
+#########################
+
+class Chain:
+    def __init__(self):
+        self.chain = {}
+        self.curr = None
+        
+    def add(self, item):
+        """
+        add 0 -> 0: None
+        add 1 -> 1: 0; 0: None
+        add 2 -> 2: 1; 1: 0; 0: None
+        add 1 -> 2: 1; 1: 2; 0: None
+        """
+        self.chain[item] = self.curr
+        self.curr = item
+        
+    def traverse(self, start):
+        """
+        Given chain 0: None; 1: 0; 2: 1
+        traverse 2 should yield (2, 1); (1, 0); (0, None) 
+        """
+        cur = start
+        nex = self.chain[cur]
+        
+        while cur is not None:
+            yield cur, nex
+
+            cur = nex 
+            nex = self.chain[cur]
+            
+import math
+
+            
+def atan2(x1, y1, x2, y2):
+    dot = x1 * x2 + y1 * y2
+    det = x1 * y2 - y1 * x2
+
+    angle = math.atan2(det, dot)
+    if angle < 0:
+        return math.pi * 2 - angle
+    return angle
+
+M90RAD = -math.pi/2
+def sorted_adj(graph, root, prev):
+    ming = None
+    mang = 7
+    # down > right
+    # left > down
+    # up > left
+    # right > up
+    if prev == root: # start, so go down (larger y), right (larger x), up, left
+        for g in graph[root]:
+            if g.y < root.y: # up  
+                a = g
+                b = 1
+
+            elif g.x < root.x: # left
+                a = g
+                b = 2
+            
+            elif g.y > root.y: # down
+                a = g
+                b = 3
+            
+            elif g.x > root.x: # right
+                a = g
+                b = 4
+            
+            if mang > b:
+                mang = b
+                ming = a
+        
+            print("finding first node", root, g)
+        yield ming, mang
+        return
+            
+        
+    # break: this has to be calculated many times
+    cdx = root.x - prev.x
+    cdy = prev.y - root.y
+    
+    ming = None
+    mang = None    
+    for g in graph[root]:
+        if g == prev:
+            continue
+        
+        dx = root.x - g.x
+        dy = g.y - root.y
+        angle = atan2(-cdx, cdy, -dx, dy)
+        
+        print("compaing", prev, root, g)
+        print("vector", (cdx, cdy), (dx, dy), angle)
+        
+        if angle == M90RAD:
+            yield g, angle
+            return 
+        
+        if mang is None or mang > angle:
+            mang = angle
+            ming = g
+    
+    yield ming, mang
+            
+                
+def seperate_shapes(graph):
+    res = []
+    visited = set()
+    n_nodes = len(graph)
+    
+    for v in graph.graph:
+        print("====== New Graph ============")
+        chain = Chain()
+        local_visited = set()
+        _dfs_backend(graph, v, visited, local_visited, v, chain, res, v)
+        
+    
+    return res
+
+def _dfs_backend(graph, start, visited, chain, prev):
+    print()
+    
+
+def _dfs_backend(graph, root, visited, local_visited, start, chain, res, cache):
+    print()
+    for adj in sorted_adj(graph, start, cache):
+        adj, angle = adj
+#         print("reading", start, adj, angle)
+        if adj not in local_visited:
+            local_visited.add(adj)
+            chain.add(adj)
+            _dfs_backend(graph, root, visited, local_visited, adj, chain, res, start)
+            
+        else:
+#             print("found closed loop")
+            # the adjecent is visited, a loop!
+            # connect adj with the start first
+            sub = Graph()
+            sub.add_node(adj)
+            sub.add_node(start)
+            sub.connect(adj, start, graph[adj][start])
+                        
+            # traverse back to find the start of the loop
+            # which is adj itself
+            for cur, nex in chain.traverse(start):
+                if cur == adj or nex == None: # reached the start of the loop
+                    break
+                    
+                sub.add_node(cur)
+                sub.add_node(nex)
+                sub.connect(cur, nex, graph[cur][nex])
+            
+            for k in sub.nodes():
+                visited.add(k)
+            res.append(sub)
+
+    
+def break_evil_pieces(text):
+#     import math
+    
+#     print(atan2(0, 1, 1, 0)/math.pi, atan2(0, 1, 0, -1)/math.pi, atan2(0, 1, -1, 0)/math.pi, atan2(0, 1, 0, 1)/math.pi)
+#     raise Exception()
+    # Let's speak your neurons here...
+#     buid_graph(shape)
+    graph = build_graph(text)
+    graph.show()
+    print("======= SEP ======")
+    
+    seps = seperate_shapes(graph)
+    for sep in seps:
+        sep.show()
+        print()
+        print()
+    
+    
